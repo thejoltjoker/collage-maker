@@ -1,144 +1,181 @@
-import {
-  Box,
-  ColorPicker,
-  Combobox,
-  Flex,
-  Heading,
-  HStack,
-  Portal,
-  Stack,
-  Text,
-  useFilter,
-  useListCollection,
-  parseColor,
-} from "@chakra-ui/react";
+import { Flex, Heading, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { setZoom } from "@/collage/crop";
+import { exportCollage } from "@/collage/exportCollage";
+import { cellRects, MAX_IMAGES } from "@/collage/grid";
+import type { ExportFormat } from "@/collage/types";
+import { useCollage } from "@/collage/useCollage";
+import { CollageCanvas } from "@/components/collage/CollageCanvas";
+import { SidebarControls } from "@/components/collage/SidebarControls";
 import { ColorModeButton } from "@/components/ui/color-mode";
-
-type PictureSize = {
-  label: string;
-  value: string;
-  width: number;
-  height: number;
-};
-
-const pictureSizes: PictureSize[] = [
-  { label: "Instagram Post", value: "ig-post", width: 1080, height: 1080 },
-  { label: "Instagram Portrait", value: "ig-portrait", width: 1080, height: 1350 },
-  { label: "Instagram Story / Reels", value: "ig-story", width: 1080, height: 1920 },
-  { label: "Facebook Post", value: "fb-post", width: 1200, height: 630 },
-  { label: "Facebook Cover", value: "fb-cover", width: 820, height: 312 },
-  { label: "X / Twitter Post", value: "x-post", width: 1600, height: 900 },
-  { label: "X / Twitter Header", value: "x-header", width: 1500, height: 500 },
-  { label: "LinkedIn Post", value: "li-post", width: 1200, height: 627 },
-  { label: "LinkedIn Cover", value: "li-cover", width: 1584, height: 396 },
-  { label: "YouTube Thumbnail", value: "yt-thumb", width: 1280, height: 720 },
-  { label: "Pinterest Pin", value: "pin", width: 1000, height: 1500 },
-  { label: "TikTok", value: "tiktok", width: 1080, height: 1920 },
-];
+import { toaster, Toaster } from "@/components/ui/toaster";
 
 function App() {
-  const [selected, setSelected] = useState<PictureSize>(pictureSizes[0]);
-  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
-  const { contains } = useFilter({ sensitivity: "base" });
-  const { collection, filter } = useListCollection({
-    initialItems: pictureSizes,
-    filter: contains,
-  });
+  const collage = useCollage();
+  const { state } = collage;
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exporting, setExporting] = useState(false);
+
+  const selectedCell = state.selectedIndex === null ? undefined : state.cells[state.selectedIndex];
+  const selectedImage =
+    selectedCell?.imageId == null ? undefined : state.images[selectedCell.imageId];
+
+  async function addFiles(files: File[], targetIndex: number | null) {
+    if (files.length === 0) {
+      toaster.create({ title: "No supported image files in that drop", type: "error" });
+      return;
+    }
+
+    const result = await collage.addFiles(files, targetIndex);
+    if (result.overflow > 0) {
+      toaster.create({
+        title: `A collage holds up to ${MAX_IMAGES} images`,
+        description: `${result.overflow} file${result.overflow === 1 ? "" : "s"} left out.`,
+        type: "info",
+      });
+    }
+    if (result.failed > 0) {
+      toaster.create({
+        title: `Could not read ${result.failed} file${result.failed === 1 ? "" : "s"}`,
+        type: "error",
+      });
+    }
+  }
+
+  function changeZoom(zoom: number) {
+    if (state.selectedIndex === null || !selectedCell || !selectedImage) return;
+
+    const rect = cellRects(state.canvas, state.gutter, state.tracks, state.orientation)[
+      state.selectedIndex
+    ];
+    if (!rect) return;
+    collage.setCrop(state.selectedIndex, setZoom(selectedImage, rect, selectedCell.crop, zoom));
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportCollage(
+        {
+          canvas: state.canvas,
+          gutter: state.gutter,
+          gutterColor: state.gutterColor,
+          cells: state.cells,
+          tracks: state.tracks,
+          orientation: state.orientation,
+          images: state.images,
+        },
+        exportFormat,
+      );
+    } catch (error) {
+      toaster.create({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : undefined,
+        type: "error",
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
-    <Flex minH="100dvh" w="full">
-      <Box
+    <Flex
+      flex="1"
+      minH="0"
+      maxH={{ md: "100dvh" }}
+      w="full"
+      direction={{ base: "column", md: "row" }}
+      overflow={{ md: "hidden" }}
+    >
+      <Stack
         as="aside"
-        w={{ base: "full", md: "240px" }}
+        w={{ base: "full", md: "320px" }}
         flexShrink={0}
+        gap={6}
+        p={5}
+        bg="bg.panel"
         borderRightWidth={{ base: 0, md: "1px" }}
         borderBottomWidth={{ base: "1px", md: 0 }}
         borderColor="border"
-        bg="bg.subtle"
-        p={4}
+        overflowY={{ md: "auto" }}
       >
-        <Stack gap={4}>
-          <HStack justify="space-between">
-            <Heading size="md">Collage Maker</Heading>
-            <ColorModeButton />
-          </HStack>
+        <HStack justify="space-between">
+          <Heading size="md" letterSpacing="tight">
+            Collage Maker
+          </Heading>
+          <ColorModeButton />
+        </HStack>
 
-          <Combobox.Root
-            collection={collection}
-            defaultValue={[pictureSizes[0].value]}
-            onInputValueChange={(e) => filter(e.inputValue)}
-            onValueChange={(e) => {
-              const item = pictureSizes.find((size) => size.value === e.value[0]);
-              if (item) setSelected(item);
-            }}
-            openOnClick
-            width="full"
-          >
-            <Combobox.Label>Picture size</Combobox.Label>
-            <Combobox.Control>
-              <Combobox.Input placeholder="Search sizes" />
-              <Combobox.IndicatorGroup>
-                <Combobox.ClearTrigger />
-                <Combobox.Trigger />
-              </Combobox.IndicatorGroup>
-            </Combobox.Control>
-            <Portal>
-              <Combobox.Positioner>
-                <Combobox.Content>
-                  <Combobox.Empty>No sizes found</Combobox.Empty>
-                  {collection.items.map((item) => (
-                    <Combobox.Item item={item} key={item.value}>
-                      <Stack gap={0}>
-                        <Text>{item.label}</Text>
-                        <Text color="fg.muted" fontSize="xs">
-                          {item.width} × {item.height}
-                        </Text>
-                      </Stack>
-                      <Combobox.ItemIndicator />
-                    </Combobox.Item>
-                  ))}
-                </Combobox.Content>
-              </Combobox.Positioner>
-            </Portal>
-          </Combobox.Root>
+        <SidebarControls
+          canvas={state.canvas}
+          sizeValue={state.sizeValue}
+          orientation={state.orientation}
+          gutter={state.gutter}
+          maxGutter={collage.maxGutter}
+          gutterColor={state.gutterColor}
+          imageCount={collage.imageCount}
+          selectedName={selectedImage?.name ?? null}
+          selectedZoom={selectedImage ? (selectedCell?.crop.zoom ?? null) : null}
+          exportFormat={exportFormat}
+          exporting={exporting}
+          onPickSize={collage.setSize}
+          onCustomSize={collage.setCustomSize}
+          onOrientationChange={collage.setOrientation}
+          onGutterChange={collage.setGutter}
+          onGutterColorChange={collage.setGutterColor}
+          onZoomChange={changeZoom}
+          onAddFiles={(files) => void addFiles(files, null)}
+          onRemoveSelected={() => {
+            if (state.selectedIndex !== null) collage.remove(state.selectedIndex);
+          }}
+          onFormatChange={setExportFormat}
+          onExport={() => void handleExport()}
+        />
+      </Stack>
 
-          <Stack gap={3}>
-            <Heading size="sm">Background</Heading>
-            <ColorPicker.Root
-              defaultValue={parseColor("#ffffff")}
-              onValueChange={(e) => setBackgroundColor(e.value.toString("hex"))}
-              width="full"
-            >
-              <ColorPicker.HiddenInput />
-              <ColorPicker.Control>
-                <ColorPicker.Input />
-                <ColorPicker.Trigger />
-              </ColorPicker.Control>
-              <Portal>
-                <ColorPicker.Positioner>
-                  <ColorPicker.Content>
-                    <ColorPicker.Area />
-                    <HStack>
-                      <ColorPicker.EyeDropper size="xs" variant="outline" />
-                      <ColorPicker.Sliders />
-                    </HStack>
-                  </ColorPicker.Content>
-                </ColorPicker.Positioner>
-              </Portal>
-            </ColorPicker.Root>
-          </Stack>
-        </Stack>
-      </Box>
+      <Flex as="main" direction="column" flex="1" minW="0" minH={{ base: "70vh", md: "0" }}>
+        <CollageCanvas
+          canvas={state.canvas}
+          gutter={state.gutter}
+          gutterColor={state.gutterColor}
+          cells={state.cells}
+          tracks={state.tracks}
+          orientation={state.orientation}
+          images={state.images}
+          selectedIndex={state.selectedIndex}
+          onSelect={collage.select}
+          onDropFiles={(files, targetIndex) => void addFiles(files, targetIndex)}
+          onCropChange={collage.setCrop}
+          onMove={collage.move}
+          onResizeBand={collage.resizeBand}
+          onResizeSlot={collage.resizeSlot}
+          onRemove={collage.remove}
+        />
 
-      <Box as="main" flex="1" p={{ base: 4, md: 6 }} bg={backgroundColor}>
-        <Heading size="lg" mb={2}>
-          Canvas
-        </Heading>
-        <Text color="fg.muted">
-          {selected.label} — {selected.width} × {selected.height} px
-        </Text>
-      </Box>
+        <HStack
+          as="footer"
+          justify="space-between"
+          gap={4}
+          px={5}
+          py={3}
+          borderTopWidth="1px"
+          borderColor="border"
+          bg="bg.panel"
+          color="fg.muted"
+          fontSize="xs"
+        >
+          <Text fontVariantNumeric="tabular-nums">
+            {state.canvas.width} × {state.canvas.height} px · {collage.imageCount} of {MAX_IMAGES}{" "}
+            images
+          </Text>
+          <Text lineClamp={1} display={{ base: "none", sm: "block" }}>
+            Drag a photo to reposition · Scroll to zoom · Drag a gutter to resize · Drag the move
+            handle onto another photo's edge to rearrange
+          </Text>
+        </HStack>
+      </Flex>
+
+      <Toaster />
     </Flex>
   );
 }
