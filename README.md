@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# Collage Maker
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Browser-based photo collage editor. Drop in images, arrange them on a flexible grid, crop and transform each cell, then export as PNG or JPEG.
 
-Currently, two official plugins are available:
+**Live:** [collage.sideproject.se](https://collage.sideproject.se)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Drop or pick images** — up to 12 photos per collage
+- **Flexible layout** — rows or columns, drag gutters to resize bands, drag cells to reorder
+- **Gutter snap** — hold Shift while resizing to align gutters
+- **Per-cell editing** — pan/zoom crop, flip, rotate 90°
+- **Replace or remove** a selected photo
+- **Randomize layout** for a fresh arrangement
+- **Size presets** — Full HD, 4K, Instagram, TikTok, YouTube, LinkedIn, and more, plus custom dimensions
+- **Export** — PNG or JPEG, edge capped at 4096px
+- **Runs entirely in the browser** — no upload to a server
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the Oxlint configuration
+- React 19 + TypeScript
+- [Vite+](https://viteplus.dev/guide/) (`vp`)
+- [Chakra UI](https://chakra-ui.com/) v3
+- Deployed to Cloudflare Workers (static assets) via Wrangler
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Develop
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install   # or: vp install
+vp dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+```bash
+vp check       # format, lint, typecheck
+vp test
+pnpm build
+pnpm preview
+```
+
+## Deploy
+
+```bash
+pnpm build
+pnpm deploy    # wrangler deploy
+```
