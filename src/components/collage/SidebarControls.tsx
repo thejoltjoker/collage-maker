@@ -14,7 +14,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { type ReactNode, useRef } from "react";
-import { LuColumns3, LuImagePlus, LuRows3, LuShuffle, LuTrash2 } from "react-icons/lu";
+import { LuColumns3, LuImagePlus, LuReplace, LuRows3, LuShuffle, LuTrash2 } from "react-icons/lu";
 import { MAX_ZOOM, MIN_ZOOM } from "@/collage/crop";
 import { MAX_EXPORT_EDGE, MAX_IMAGES } from "@/collage/grid";
 import { imageFilesFrom } from "@/collage/loadImages";
@@ -48,6 +48,7 @@ type SidebarControlsProps = {
   onGutterColorChange: (color: string) => void;
   onZoomChange: (zoom: number) => void;
   onAddFiles: (files: File[]) => void;
+  onReplaceSelected: (files: File[]) => void;
   onRemoveSelected: () => void;
   onFormatChange: (format: ExportFormat) => void;
   onExport: () => void;
@@ -90,11 +91,13 @@ export function SidebarControls({
   onGutterColorChange,
   onZoomChange,
   onAddFiles,
+  onReplaceSelected,
   onRemoveSelected,
   onFormatChange,
   onExport,
 }: SidebarControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement | null>(null);
   const isCustomSize = sizeValue === CUSTOM_SIZE_VALUE;
 
   return (
@@ -302,8 +305,8 @@ export function SidebarControls({
       <Section title="Selected image">
         {selectedZoom === null ? (
           <Text fontSize="xs" color="fg.muted">
-            Click a photo to zoom or remove it. Double-click to reset zoom. Drag a photo to move it
-            inside its frame.
+            Click a photo to zoom, replace, or remove it. Double-click to reset zoom. Drag a photo
+            to move it inside its frame.
           </Text>
         ) : (
           <Stack gap={3}>
@@ -333,6 +336,21 @@ export function SidebarControls({
                 </Slider.Thumb>
               </Slider.Control>
             </Slider.Root>
+            <Button variant="surface" size="sm" onClick={() => replaceInputRef.current?.click()}>
+              <LuReplace />
+              Replace image
+            </Button>
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+              hidden
+              onChange={(event) => {
+                const files = imageFilesFrom(event.target.files ?? []);
+                event.target.value = "";
+                if (files.length > 0) onReplaceSelected(files);
+              }}
+            />
             <Button variant="outline" colorPalette="red" size="sm" onClick={onRemoveSelected}>
               <LuTrash2 />
               Remove image

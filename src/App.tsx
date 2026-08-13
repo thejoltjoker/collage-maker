@@ -126,6 +126,9 @@ function App() {
           onGutterColorChange={collage.setGutterColor}
           onZoomChange={changeZoom}
           onAddFiles={(files) => void addFiles(files, null)}
+          onReplaceSelected={(files) => {
+            if (state.selectedIndex !== null) void addFiles(files, state.selectedIndex);
+          }}
           onRemoveSelected={() => {
             if (state.selectedIndex !== null) collage.remove(state.selectedIndex);
           }}

@@ -8,7 +8,9 @@
     "build": "tsc -b && vp build",
     "lint": "vp lint",
     "preview": "vp preview",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "deploy": "wrangler deploy",
+    "cf-version": "wrangler versions upload"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.1",
@@ -27,7 +29,8 @@
     "@vitejs/plugin-react": "^6.0.4",
     "typescript": "~6.0.2",
     "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "wrangler": "^4.121.0"
   },
   "devEngines": {
     "packageManager": {
