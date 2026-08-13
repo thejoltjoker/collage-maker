@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://collage.sideproject.se/sitemap.xml

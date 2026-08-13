@@ -43,3 +43,7 @@ pnpm preview
 pnpm build
 pnpm deploy    # wrangler deploy
 ```
+
+## Bugs & feature requests
+
+Report bugs and propose features via [GitHub Issues](https://github.com/thejoltjoker/collage-maker/issues). Open a [new issue](https://github.com/thejoltjoker/collage-maker/issues/new) with enough detail to reproduce a bug or describe the feature you want.

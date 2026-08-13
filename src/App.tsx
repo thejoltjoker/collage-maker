@@ -117,12 +117,18 @@ function App() {
         overflowY={{ md: "auto" }}
         alignSelf="stretch"
       >
-        <HStack justify="space-between">
-          <Heading size="md" letterSpacing="tight">
-            Collage Maker
-          </Heading>
-          <ColorModeButton />
-        </HStack>
+        <Stack gap={1}>
+          <HStack justify="space-between">
+            <Heading as="h1" size="md" letterSpacing="tight">
+              Collage Maker
+            </Heading>
+            <ColorModeButton />
+          </HStack>
+          <Text fontSize="sm" color="fg.muted">
+            Free online photo collage editor. Arrange up to 12 images in your browser, then export
+            PNG or JPEG — nothing is uploaded.
+          </Text>
+        </Stack>
 
         <SidebarControls
           canvas={state.canvas}
