@@ -43,29 +43,32 @@ export function CollageCell({
   const rendered = image ? renderedSize(image, rect, cell.crop.zoom) : null;
   const offset = image ? imageOffset(image, rect, cell.crop) : null;
   const highlighted = dropTarget || dropIndicator === "swap";
+  const showOverflow = panning && rendered !== null && offset !== null;
+  const imageStyle =
+    rendered && offset
+      ? { left: offset.x, top: offset.y, width: rendered.width, height: rendered.height }
+      : undefined;
 
   function startPan(event: ReactPointerEvent<HTMLDivElement>) {
     onSelect(index);
-    if (!image || event.button !== 0) return;
+    if (!image || event.button !== 0 || event.detail > 1) return;
 
     cropRef.current = cell.crop;
     pointerRef.current = { x: event.clientX, y: event.clientY };
     event.currentTarget.setPointerCapture(event.pointerId);
-    setPanning(true);
   }
 
   function movePan(event: ReactPointerEvent<HTMLDivElement>) {
     const previous = pointerRef.current;
     if (!previous || !image) return;
 
+    const dx = event.clientX - previous.x;
+    const dy = event.clientY - previous.y;
+    if (!panning && dx === 0 && dy === 0) return;
+
     pointerRef.current = { x: event.clientX, y: event.clientY };
-    cropRef.current = panCrop(
-      image,
-      rect,
-      cropRef.current,
-      event.clientX - previous.x,
-      event.clientY - previous.y,
-    );
+    if (!panning) setPanning(true);
+    cropRef.current = panCrop(image, rect, cropRef.current, dx, dy);
     onCropChange(index, cropRef.current);
   }
 
@@ -87,7 +90,8 @@ export function CollageCell({
     <Box
       data-cell-index={index}
       position="absolute"
-      overflow="hidden"
+      overflow={showOverflow ? "visible" : "hidden"}
+      zIndex={showOverflow ? 3 : undefined}
       bg={image ? "transparent" : "bg.panel"}
       borderWidth={image ? 0 : "1px"}
       borderStyle="dashed"
@@ -99,6 +103,7 @@ export function CollageCell({
       opacity={reordering ? 0.4 : 1}
       cursor={image ? (panning ? "grabbing" : "grab") : "default"}
       touchAction="none"
+      userSelect="none"
       transition="opacity 0.12s ease"
       style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
       onPointerDown={startPan}
@@ -108,21 +113,33 @@ export function CollageCell({
       onDoubleClick={resetZoom}
       css={{ "&:hover [data-cell-control]": { opacity: 1 } }}
     >
-      {image && rendered && offset ? (
-        <Image
-          src={image.src}
-          alt={image.name}
-          draggable={false}
-          pointerEvents="none"
-          position="absolute"
-          maxW="none"
-          style={{
-            left: offset.x,
-            top: offset.y,
-            width: rendered.width,
-            height: rendered.height,
-          }}
-        />
+      {image && rendered && offset && imageStyle ? (
+        <>
+          {showOverflow && (
+            <Image
+              src={image.src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              pointerEvents="none"
+              position="absolute"
+              maxW="none"
+              opacity={0.35}
+              style={imageStyle}
+            />
+          )}
+          <Box overflow="hidden" position="absolute" inset={0}>
+            <Image
+              src={image.src}
+              alt={image.name}
+              draggable={false}
+              pointerEvents="none"
+              position="absolute"
+              maxW="none"
+              style={imageStyle}
+            />
+          </Box>
+        </>
       ) : (
         <Stack align="center" justify="center" gap={1} h="full" color="fg.muted" px={2}>
           <Icon size="md" color={highlighted ? "blue.fg" : "fg.subtle"}>
