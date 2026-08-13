@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import type { Placement } from "@/collage/arrange";
-import { zoomCropAt } from "@/collage/crop";
+import { arrowPanDelta, panCrop, zoomCropAt } from "@/collage/crop";
 import {
   bandLength,
   cellRects,
@@ -16,7 +16,9 @@ import {
   slotSnapTargets,
   trackEdges,
 } from "@/collage/grid";
+import type { InstructionContext } from "@/collage/instructions";
 import { imageFilesFrom } from "@/collage/loadImages";
+import { orientedSize } from "@/collage/transform";
 import type { CanvasSpec, Cell, CollageImage, Crop, Orientation, Tracks } from "@/collage/types";
 import { useElementSize } from "@/collage/useElementSize";
 import { CollageCell } from "./CollageCell";
@@ -44,6 +46,7 @@ type CollageCanvasProps = {
   onResizeBand: (index: number, deltaFraction: number) => void;
   onResizeSlot: (band: number, index: number, deltaFraction: number) => void;
   onRemove: (index: number) => void;
+  onInstructionContextChange?: (context: InstructionContext) => void;
 };
 
 type DropTarget = {
@@ -115,12 +118,14 @@ export function CollageCanvas({
   onResizeBand,
   onResizeSlot,
   onRemove,
+  onInstructionContextChange,
 }: CollageCanvasProps) {
   const [stageRef, stage] = useElementSize<HTMLDivElement>();
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [fileDragging, setFileDragging] = useState(false);
   const [reorder, setReorder] = useState<{ from: number; over: DropTarget | null } | null>(null);
+  const [gutterDrag, setGutterDrag] = useState<{ canSnap: boolean } | null>(null);
 
   const scale =
     stage.width > 0 && stage.height > 0
@@ -136,6 +141,19 @@ export function CollageCanvas({
     tracks.bands.length,
   );
   const bandSpans = trackEdges(rows ? frame.height : frame.width, previewGutter, tracks.bands);
+
+  const selectedCell = selectedIndex === null ? undefined : cells[selectedIndex];
+  const hasSelection = selectedCell?.imageId != null;
+
+  useEffect(() => {
+    onInstructionContextChange?.({
+      hasSelection,
+      resizingGutter: gutterDrag !== null,
+      canSnapGutter: gutterDrag?.canSnap ?? false,
+      reordering: reorder !== null,
+      droppingFiles: fileDragging,
+    });
+  }, [hasSelection, gutterDrag, reorder, fileDragging, onInstructionContextChange]);
 
   // Zooming has to preventDefault, which React's passive wheel listener cannot do.
   useEffect(() => {
@@ -154,10 +172,11 @@ export function CollageCanvas({
       event.preventDefault();
       const box = (event.target as Element).getBoundingClientRect();
       const factor = Math.exp(-event.deltaY / ZOOM_SENSITIVITY);
+      const oriented = orientedSize(image, cell.transform.rotation);
       onSelect(index);
       onCropChange(
         index,
-        zoomCropAt(image, rect, cell.crop, cell.crop.zoom * factor, {
+        zoomCropAt(oriented, rect, cell.crop, cell.crop.zoom * factor, {
           x: event.clientX - box.left,
           y: event.clientY - box.top,
         }),
@@ -170,7 +189,6 @@ export function CollageCanvas({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
       if (selectedIndex === null) return;
 
       const target = event.target;
@@ -179,13 +197,28 @@ export function CollageCanvas({
         (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
       if (isTyping) return;
 
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        onRemove(selectedIndex);
+        return;
+      }
+
+      const delta = arrowPanDelta(event.key, event.shiftKey);
+      if (!delta) return;
+
+      const cell = cells[selectedIndex];
+      const rect = rects[selectedIndex];
+      const image = cell?.imageId == null ? undefined : images[cell.imageId];
+      if (!cell || !rect || !image) return;
+
       event.preventDefault();
-      onRemove(selectedIndex);
+      const oriented = orientedSize(image, cell.transform.rotation);
+      onCropChange(selectedIndex, panCrop(oriented, rect, cell.crop, delta.dx, delta.dy));
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedIndex, onRemove]);
+  }, [selectedIndex, cells, images, rects, onCropChange, onRemove]);
 
   // Files dropped outside the stage would otherwise navigate away from the app.
   useEffect(() => {
@@ -328,6 +361,9 @@ export function CollageCanvas({
                 crossLength={end - start}
                 snapTargets={snaps}
                 onResize={(deltaPx) => onResizeSlot(band, index, deltaPx / content)}
+                onActiveChange={(active) =>
+                  setGutterDrag(active ? { canSnap: snaps.length > 0 } : null)
+                }
               />
             ));
           })}
@@ -343,6 +379,7 @@ export function CollageCanvas({
                 crossStart={0}
                 crossLength={rows ? frame.width : frame.height}
                 onResize={(deltaPx) => onResizeBand(index, deltaPx / stackContent)}
+                onActiveChange={(active) => setGutterDrag(active ? { canSnap: false } : null)}
               />
             ),
           )}

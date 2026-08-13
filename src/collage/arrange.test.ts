@@ -10,11 +10,16 @@ import {
   randomizeLayout,
   removeCell,
 } from "./arrange";
-import { arrangementOf, autoArrangement, equalTracks } from "./grid";
+import { arrangementOf, autoArrangement, emptyCell, equalTracks } from "./grid";
+import { DEFAULT_TRANSFORM } from "./transform";
 import type { Cell } from "./types";
 
 function cell(imageId: string): Cell {
-  return { imageId, crop: { focusX: 0.5, focusY: 0.5, zoom: 1 } };
+  return {
+    imageId,
+    crop: { focusX: 0.5, focusY: 0.5, zoom: 1 },
+    transform: { ...DEFAULT_TRANSFORM },
+  };
 }
 
 /** Builds a layout from bands of image ids, with every band and photo sharing evenly. */
@@ -121,16 +126,11 @@ describe("randomizeLayout", () => {
   });
 
   it("keeps only filled photos and falls back to an empty collage", () => {
-    const withEmpty = randomizeLayout(
-      [cell("a"), { imageId: null, crop: cell("x").crop }],
-      () => 0.5,
-    );
+    const withEmpty = randomizeLayout([cell("a"), emptyCell()], () => 0.5);
     expect(withEmpty.cells.map((entry) => entry.imageId)).toEqual(["a"]);
     expect(arrangementOf(withEmpty.tracks)).toEqual([1]);
 
-    expect(randomizeLayout([{ imageId: null, crop: cell("x").crop }], () => 0.5)).toEqual(
-      emptyLayout(),
-    );
+    expect(randomizeLayout([emptyCell()], () => 0.5)).toEqual(emptyLayout());
   });
 });
 

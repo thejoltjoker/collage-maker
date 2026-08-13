@@ -60,6 +60,23 @@ export function panCrop(image: Size, cell: Size, crop: Crop, dx: number, dy: num
   });
 }
 
+/** Pixel nudge for arrow-key panning. Shift multiplies the step by 10. */
+export function arrowPanDelta(key: string, shiftKey: boolean): { dx: number; dy: number } | null {
+  const step = shiftKey ? 10 : 1;
+  switch (key) {
+    case "ArrowLeft":
+      return { dx: -step, dy: 0 };
+    case "ArrowRight":
+      return { dx: step, dy: 0 };
+    case "ArrowUp":
+      return { dx: 0, dy: -step };
+    case "ArrowDown":
+      return { dx: 0, dy: step };
+    default:
+      return null;
+  }
+}
+
 /** Zoom while keeping the image point under `pointer` (cell coordinates) in place. */
 export function zoomCropAt(
   image: Size,

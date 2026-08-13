@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  arrowPanDelta,
   clampCrop,
   coverScale,
   imageOffset,
@@ -79,6 +80,27 @@ describe("panCrop", () => {
       const crop = panCrop(portrait, cell, { ...centred, zoom: 1.5 }, dx, dy);
       expectNoGap(portrait, cell, crop);
     }
+  });
+});
+
+describe("arrowPanDelta", () => {
+  it("nudges one pixel for each arrow key", () => {
+    expect(arrowPanDelta("ArrowLeft", false)).toEqual({ dx: -1, dy: 0 });
+    expect(arrowPanDelta("ArrowRight", false)).toEqual({ dx: 1, dy: 0 });
+    expect(arrowPanDelta("ArrowUp", false)).toEqual({ dx: 0, dy: -1 });
+    expect(arrowPanDelta("ArrowDown", false)).toEqual({ dx: 0, dy: 1 });
+  });
+
+  it("nudges ten pixels while Shift is held", () => {
+    expect(arrowPanDelta("ArrowLeft", true)).toEqual({ dx: -10, dy: 0 });
+    expect(arrowPanDelta("ArrowRight", true)).toEqual({ dx: 10, dy: 0 });
+    expect(arrowPanDelta("ArrowUp", true)).toEqual({ dx: 0, dy: -10 });
+    expect(arrowPanDelta("ArrowDown", true)).toEqual({ dx: 0, dy: 10 });
+  });
+
+  it("ignores unrelated keys", () => {
+    expect(arrowPanDelta("a", false)).toBeNull();
+    expect(arrowPanDelta("Delete", true)).toBeNull();
   });
 });
 

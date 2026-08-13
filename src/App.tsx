@@ -1,20 +1,36 @@
-import { Flex, Heading, HStack, Stack, Text } from "@chakra-ui/react";
+import { Flex, Heading, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { LuExternalLink } from "react-icons/lu";
 import { setZoom } from "@/collage/crop";
 import { exportCollage } from "@/collage/exportCollage";
 import { cellRects, MAX_IMAGES } from "@/collage/grid";
+import type { InstructionContext } from "@/collage/instructions";
+import { orientedSize } from "@/collage/transform";
 import type { ExportFormat } from "@/collage/types";
 import { useCollage } from "@/collage/useCollage";
+import { CanvasInstructions } from "@/components/collage/CanvasInstructions";
 import { CollageCanvas } from "@/components/collage/CollageCanvas";
+import { SelectionActionBar } from "@/components/collage/SelectionActionBar";
 import { SidebarControls } from "@/components/collage/SidebarControls";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { toaster, Toaster } from "@/components/ui/toaster";
+
+const ISSUE_URL = "https://github.com/thejoltjoker/collage-maker/issues/new";
+
+const idleInstructions: InstructionContext = {
+  hasSelection: false,
+  resizingGutter: false,
+  canSnapGutter: false,
+  reordering: false,
+  droppingFiles: false,
+};
 
 function App() {
   const collage = useCollage();
   const { state } = collage;
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [exporting, setExporting] = useState(false);
+  const [instructions, setInstructions] = useState<InstructionContext>(idleInstructions);
 
   const selectedCell = state.selectedIndex === null ? undefined : state.cells[state.selectedIndex];
   const selectedImage =
@@ -49,7 +65,8 @@ function App() {
       state.selectedIndex
     ];
     if (!rect) return;
-    collage.setCrop(state.selectedIndex, setZoom(selectedImage, rect, selectedCell.crop, zoom));
+    const oriented = orientedSize(selectedImage, selectedCell.transform.rotation);
+    collage.setCrop(state.selectedIndex, setZoom(oriented, rect, selectedCell.crop, zoom));
   }
 
   async function handleExport() {
@@ -98,6 +115,7 @@ function App() {
         borderBottomWidth={{ base: "1px", md: 0 }}
         borderColor="border"
         overflowY={{ md: "auto" }}
+        alignSelf="stretch"
       >
         <HStack justify="space-between">
           <Heading size="md" letterSpacing="tight">
@@ -135,6 +153,23 @@ function App() {
           onFormatChange={setExportFormat}
           onExport={() => void handleExport()}
         />
+
+        <Link
+          href={ISSUE_URL}
+          target="_blank"
+          rel="noreferrer"
+          mt="auto"
+          pt={2}
+          fontSize="xs"
+          color="fg.muted"
+          display="inline-flex"
+          alignItems="center"
+          gap={1}
+          _hover={{ color: "fg" }}
+        >
+          Request a feature or report a bug
+          <LuExternalLink />
+        </Link>
       </Stack>
 
       <Flex as="main" direction="column" flex="1" minW="0" minH={{ base: "70vh", md: "0" }}>
@@ -154,6 +189,7 @@ function App() {
           onResizeBand={collage.resizeBand}
           onResizeSlot={collage.resizeSlot}
           onRemove={collage.remove}
+          onInstructionContextChange={setInstructions}
         />
 
         <HStack
@@ -172,12 +208,24 @@ function App() {
             {state.canvas.width} × {state.canvas.height} px · {collage.imageCount} of {MAX_IMAGES}{" "}
             images
           </Text>
-          <Text lineClamp={1} display={{ base: "none", sm: "block" }}>
-            Drag a photo to reposition · Scroll to zoom · Drag a gutter to resize · Hold Shift to
-            snap gutters · Drag the move handle onto another photo's edge to rearrange
-          </Text>
+          <CanvasInstructions {...instructions} />
         </HStack>
       </Flex>
+
+      <SelectionActionBar
+        open={selectedImage != null}
+        imageName={selectedImage?.name ?? null}
+        onClose={() => collage.select(null)}
+        onFlipHorizontal={() => {
+          if (state.selectedIndex !== null) collage.flipHorizontal(state.selectedIndex);
+        }}
+        onFlipVertical={() => {
+          if (state.selectedIndex !== null) collage.flipVertical(state.selectedIndex);
+        }}
+        onRotateClockwise={() => {
+          if (state.selectedIndex !== null) collage.rotateClockwise(state.selectedIndex);
+        }}
+      />
 
       <Toaster />
     </Flex>

@@ -1,3 +1,5 @@
+import type { Transform } from "./transform";
+
 export type Size = {
   width: number;
   height: number;
@@ -33,6 +35,7 @@ export type Crop = {
 export type Cell = {
   imageId: string | null;
   crop: Crop;
+  transform: Transform;
 };
 
 /** Whether the collage stacks its bands of photos as rows or as columns. */

@@ -16,6 +16,7 @@ type GutterDividerProps = {
   /** Other gutter centres to align with while Shift is held. */
   snapTargets?: number[];
   onResize: (deltaPx: number) => void;
+  onActiveChange?: (active: boolean) => void;
 };
 
 /** Drag handle that shifts space between two neighbouring rows or columns. */
@@ -27,6 +28,7 @@ export function GutterDivider({
   crossLength,
   snapTargets = [],
   onResize,
+  onActiveChange,
 }: GutterDividerProps) {
   const [active, setActive] = useState(false);
   const dragRef = useRef<{ startPointer: number; startCentre: number; applied: number } | null>(
@@ -34,6 +36,11 @@ export function GutterDivider({
   );
   const vertical = axis === "vertical";
   const hitArea = Math.max(MIN_HIT_AREA, thickness);
+
+  function setDragging(next: boolean) {
+    setActive(next);
+    onActiveChange?.(next);
+  }
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
@@ -44,7 +51,7 @@ export function GutterDivider({
       applied: 0,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    setActive(true);
+    setDragging(true);
   }
 
   function move(event: ReactPointerEvent<HTMLDivElement>) {
@@ -65,7 +72,7 @@ export function GutterDivider({
 
   function end(event: ReactPointerEvent<HTMLDivElement>) {
     dragRef.current = null;
-    setActive(false);
+    setDragging(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }

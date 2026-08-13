@@ -21,6 +21,13 @@ import {
 } from "./grid";
 import { loadImageFiles } from "./loadImages";
 import { CUSTOM_SIZE_VALUE, defaultSizePreset, type SizePreset } from "./sizes";
+import {
+  DEFAULT_TRANSFORM,
+  flipHorizontal,
+  flipVertical,
+  orientedSize,
+  rotateClockwise,
+} from "./transform";
 import type { CanvasSpec, Cell, CollageImage, Crop, Orientation, Tracks } from "./types";
 
 export const MIN_CELL_LENGTH = 8;
@@ -45,6 +52,9 @@ type Action =
   | { type: "removeAt"; index: number }
   | { type: "move"; from: number; to: number; placement: Placement }
   | { type: "setCrop"; index: number; crop: Crop }
+  | { type: "flipHorizontal"; index: number }
+  | { type: "flipVertical"; index: number }
+  | { type: "rotateClockwise"; index: number }
   | { type: "setOrientation"; orientation: Orientation }
   | { type: "resizeBand"; index: number; deltaFraction: number }
   | { type: "resizeSlot"; band: number; index: number; deltaFraction: number }
@@ -113,7 +123,7 @@ function normalizeCrops(state: CollageState): CollageState {
     const rect = rects[index];
     if (!image || !rect) return cell;
 
-    const crop = clampCrop(image, rect, cell.crop);
+    const crop = clampCrop(orientedSize(image, cell.transform.rotation), rect, cell.crop);
     if (
       crop.focusX === cell.crop.focusX &&
       crop.focusY === cell.crop.focusY &&
@@ -141,7 +151,11 @@ function reduce(state: CollageState, action: Action): CollageState {
         images[first.id] = first;
         layout = {
           ...layout,
-          cells: layout.cells.with(target, { imageId: first.id, crop: { ...DEFAULT_CROP } }),
+          cells: layout.cells.with(target, {
+            imageId: first.id,
+            crop: { ...DEFAULT_CROP },
+            transform: { ...DEFAULT_TRANSFORM },
+          }),
         };
         incoming = rest;
       }
@@ -150,7 +164,11 @@ function reduce(state: CollageState, action: Action): CollageState {
       for (const image of incoming) {
         if (filledCount(layout.cells) + added.length >= MAX_IMAGES) break;
         images[image.id] = image;
-        added.push({ imageId: image.id, crop: { ...DEFAULT_CROP } });
+        added.push({
+          imageId: image.id,
+          crop: { ...DEFAULT_CROP },
+          transform: { ...DEFAULT_TRANSFORM },
+        });
       }
 
       // Untouched collages keep re-flowing into a near square grid for the current
@@ -203,6 +221,29 @@ function reduce(state: CollageState, action: Action): CollageState {
       const cell = state.cells[action.index];
       if (!cell) return state;
       return { ...state, cells: state.cells.with(action.index, { ...cell, crop: action.crop }) };
+    }
+
+    case "flipHorizontal":
+    case "flipVertical":
+    case "rotateClockwise": {
+      const cell = state.cells[action.index];
+      if (!cell || cell.imageId === null) return state;
+
+      const apply =
+        action.type === "flipHorizontal"
+          ? flipHorizontal
+          : action.type === "flipVertical"
+            ? flipVertical
+            : rotateClockwise;
+      const next = apply(cell.transform, cell.crop);
+      return {
+        ...state,
+        cells: state.cells.with(action.index, {
+          ...cell,
+          transform: next.transform,
+          crop: next.crop,
+        }),
+      };
     }
 
     // Bands and slots stay as they are, so the collage simply turns on its side.
@@ -348,6 +389,9 @@ export function useCollage() {
     move: (from: number, to: number, placement: Placement) =>
       dispatch({ type: "move", from, to, placement }),
     setCrop: (index: number, crop: Crop) => dispatch({ type: "setCrop", index, crop }),
+    flipHorizontal: (index: number) => dispatch({ type: "flipHorizontal", index }),
+    flipVertical: (index: number) => dispatch({ type: "flipVertical", index }),
+    rotateClockwise: (index: number) => dispatch({ type: "rotateClockwise", index }),
     setOrientation: (orientation: Orientation) => dispatch({ type: "setOrientation", orientation }),
     resizeBand: (index: number, deltaFraction: number) =>
       dispatch({ type: "resizeBand", index, deltaFraction }),

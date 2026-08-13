@@ -1,4 +1,5 @@
 import type { CanvasSpec, Cell, Crop, Orientation, Rect, Tracks } from "./types";
+import { DEFAULT_TRANSFORM } from "./transform";
 
 export const MAX_IMAGES = 12;
 export const MAX_EXPORT_EDGE = 4096;
@@ -6,7 +7,7 @@ export const MAX_EXPORT_EDGE = 4096;
 export const DEFAULT_CROP: Crop = { focusX: 0.5, focusY: 0.5, zoom: 1 };
 
 export function emptyCell(): Cell {
-  return { imageId: null, crop: { ...DEFAULT_CROP } };
+  return { imageId: null, crop: { ...DEFAULT_CROP }, transform: { ...DEFAULT_TRANSFORM } };
 }
 
 /** Near square grid: 1, 2, 2x2, 3x2, 3x3, 4x3. */

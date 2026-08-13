@@ -1,9 +1,11 @@
 import { Box, Icon, IconButton, Image, Stack, Text } from "@chakra-ui/react";
 import { type PointerEvent as ReactPointerEvent, useRef, useState } from "react";
 import { LuImage, LuMove, LuX } from "react-icons/lu";
-import { imageOffset, panCrop, renderedSize, setZoom } from "@/collage/crop";
+import { panCrop, setZoom } from "@/collage/crop";
 import { DEFAULT_CROP } from "@/collage/grid";
+import { orientedSize, transformLayout } from "@/collage/transform";
 import type { Cell, CollageImage, Crop, Rect } from "@/collage/types";
+import { Tooltip } from "@/components/ui/tooltip";
 import { DropIndicator, type Indicator } from "./DropIndicator";
 
 type CollageCellProps = {
@@ -40,18 +42,24 @@ export function CollageCell({
   const cropRef = useRef<Crop>(cell.crop);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
 
-  const rendered = image ? renderedSize(image, rect, cell.crop.zoom) : null;
-  const offset = image ? imageOffset(image, rect, cell.crop) : null;
+  const layout = image ? transformLayout(image, rect, cell.crop, cell.transform) : null;
+  const oriented = image ? orientedSize(image, cell.transform.rotation) : null;
   const highlighted = dropTarget || dropIndicator === "swap";
-  const showOverflow = panning && rendered !== null && offset !== null;
-  const imageStyle =
-    rendered && offset
-      ? { left: offset.x, top: offset.y, width: rendered.width, height: rendered.height }
-      : undefined;
+  const showOverflow = panning && layout !== null;
+
+  const imageStyle = layout
+    ? {
+        left: layout.box.x + layout.box.width / 2,
+        top: layout.box.y + layout.box.height / 2,
+        width: layout.bitmap.width,
+        height: layout.bitmap.height,
+        transform: layout.cssTransform,
+      }
+    : undefined;
 
   function startPan(event: ReactPointerEvent<HTMLDivElement>) {
     onSelect(index);
-    if (!image || event.button !== 0 || event.detail > 1) return;
+    if (!image || !oriented || event.button !== 0 || event.detail > 1) return;
 
     cropRef.current = cell.crop;
     pointerRef.current = { x: event.clientX, y: event.clientY };
@@ -60,7 +68,7 @@ export function CollageCell({
 
   function movePan(event: ReactPointerEvent<HTMLDivElement>) {
     const previous = pointerRef.current;
-    if (!previous || !image) return;
+    if (!previous || !image || !oriented) return;
 
     const dx = event.clientX - previous.x;
     const dy = event.clientY - previous.y;
@@ -68,7 +76,7 @@ export function CollageCell({
 
     pointerRef.current = { x: event.clientX, y: event.clientY };
     if (!panning) setPanning(true);
-    cropRef.current = panCrop(image, rect, cropRef.current, dx, dy);
+    cropRef.current = panCrop(oriented, rect, cropRef.current, dx, dy);
     onCropChange(index, cropRef.current);
   }
 
@@ -81,9 +89,9 @@ export function CollageCell({
   }
 
   function resetZoom() {
-    if (!image) return;
+    if (!image || !oriented) return;
     onSelect(index);
-    onCropChange(index, setZoom(image, rect, cell.crop, DEFAULT_CROP.zoom));
+    onCropChange(index, setZoom(oriented, rect, cell.crop, DEFAULT_CROP.zoom));
   }
 
   return (
@@ -113,7 +121,7 @@ export function CollageCell({
       onDoubleClick={resetZoom}
       css={{ "&:hover [data-cell-control]": { opacity: 1 } }}
     >
-      {image && rendered && offset && imageStyle ? (
+      {image && layout && imageStyle ? (
         <>
           {showOverflow && (
             <Image
@@ -155,29 +163,30 @@ export function CollageCell({
 
       {image && (
         <>
-          <IconButton
-            aria-label={`Move ${image.name} to another cell`}
-            title="Drag onto another photo: its middle swaps, its edges move this photo there"
-            data-cell-control
-            size="xs"
-            variant="solid"
-            bg="black/60"
-            color="white"
-            _hover={{ bg: "black/80" }}
-            position="absolute"
-            top={1}
-            left={1}
-            cursor="grab"
-            opacity={selected ? 1 : 0}
-            transition="opacity 0.12s ease"
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              onSelect(index);
-              onReorderStart(index, event);
-            }}
-          >
-            <LuMove />
-          </IconButton>
+          <Tooltip content="Drag the move handle onto another photo's edge to rearrange">
+            <IconButton
+              aria-label={`Move ${image.name} to another cell`}
+              data-cell-control
+              size="xs"
+              variant="solid"
+              bg="black/60"
+              color="white"
+              _hover={{ bg: "black/80" }}
+              position="absolute"
+              top={1}
+              left={1}
+              cursor="grab"
+              opacity={selected ? 1 : 0}
+              transition="opacity 0.12s ease"
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                onSelect(index);
+                onReorderStart(index, event);
+              }}
+            >
+              <LuMove />
+            </IconButton>
+          </Tooltip>
 
           <IconButton
             aria-label={`Remove ${image.name}`}
