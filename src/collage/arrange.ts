@@ -1,5 +1,5 @@
 import { autoArrangement, emptyCell, equalTracks, normalizeFractions, syncTracks } from "./grid";
-import type { Cell, Tracks } from "./types";
+import type { Cell, Orientation, Tracks } from "./types";
 
 /** Cells in stacking order together with the tracks that shape them into bands. */
 export type Layout = {
@@ -64,9 +64,12 @@ function newShare(count: number): number {
   return 1 / Math.max(1, count);
 }
 
-/** Lays the photos out as a near square grid, keeping any sizes the shape allows. */
-export function autoLayout(cells: Cell[], tracks: Tracks): Layout {
-  return { cells, tracks: syncTracks(tracks, autoArrangement(cells.length)) };
+/** Lays the photos out as a near square grid for the current orientation. */
+export function autoLayout(cells: Cell[], tracks: Tracks, orientation: Orientation): Layout {
+  return {
+    cells,
+    tracks: syncTracks(tracks, autoArrangement(cells.length, orientation)),
+  };
 }
 
 export function isEmpty(layout: Layout): boolean {

@@ -41,10 +41,15 @@ describe("positionOf", () => {
 });
 
 describe("autoLayout", () => {
-  it("arranges photos as a near square grid", () => {
-    const cells = ["a", "b", "c"].map(cell);
+  it("arranges photos as a near square grid for the given orientation", () => {
+    const cells = ["a", "b", "c", "d", "e"].map(cell);
 
-    expect(arrangementOf(autoLayout(cells, equalTracks([1])).tracks)).toEqual(autoArrangement(3));
+    expect(arrangementOf(autoLayout(cells, equalTracks([1]), "rows").tracks)).toEqual(
+      autoArrangement(5, "rows"),
+    );
+    expect(arrangementOf(autoLayout(cells, equalTracks([1]), "columns").tracks)).toEqual(
+      autoArrangement(5, "columns"),
+    );
   });
 });
 

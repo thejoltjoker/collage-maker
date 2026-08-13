@@ -19,11 +19,17 @@ export function computeTopology(cellCount: number): { rows: number; cols: number
 /** How many photos each band holds, in stacking order. */
 export type Arrangement = number[];
 
-/** Bands of a near square grid, with any leftover photos in the last one. */
-export function autoArrangement(cellCount: number): Arrangement {
+/**
+ * Bands of a near square grid. In rows mode each band is a row filled left to right; in
+ * columns mode each band is a column filled top to bottom. Leftover photos land in the
+ * last band either way, so both options stay balanced and equal-sized.
+ */
+export function autoArrangement(cellCount: number, orientation: Orientation = "rows"): Arrangement {
   const count = Math.max(1, cellCount);
   const { rows, cols } = computeTopology(count);
-  return Array.from({ length: rows }, (_, band) => Math.min(cols, count - band * cols));
+  const bandCount = orientation === "rows" ? rows : cols;
+  const perBand = orientation === "rows" ? cols : rows;
+  return Array.from({ length: bandCount }, (_, band) => Math.min(perBand, count - band * perBand));
 }
 
 export function arrangementOf(tracks: Tracks): Arrangement {

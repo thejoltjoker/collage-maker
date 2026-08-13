@@ -151,12 +151,13 @@ function reduce(state: CollageState, action: Action): CollageState {
         added.push({ imageId: image.id, crop: { ...DEFAULT_CROP } });
       }
 
-      // Untouched collages keep re-flowing into a near square grid; rearranged ones
-      // keep their bands and take the new photos into the last one.
+      // Untouched collages keep re-flowing into a near square grid for the current
+      // orientation; rearranged ones keep their bands and take new photos into the last.
       layout = state.autoArranged
         ? autoLayout(
             [...layout.cells.filter((cell) => cell.imageId !== null), ...added],
             state.tracks,
+            state.orientation,
           )
         : added.reduce(appendCell, layout);
 
@@ -205,12 +206,20 @@ function reduce(state: CollageState, action: Action): CollageState {
     // Bands and slots stay as they are, so the collage simply turns on its side.
     case "setOrientation": {
       if (action.orientation === state.orientation) return state;
+
+      // Auto-arranged collages rebuild into an equal near-square for the new option;
+      // manually rearranged ones keep their bands and only turn on their side.
+      const layout = state.autoArranged
+        ? autoLayout(state.cells, state.tracks, action.orientation)
+        : { cells: state.cells, tracks: state.tracks };
+
       return {
         ...state,
+        ...layout,
         orientation: action.orientation,
         gutter: Math.min(
           state.gutter,
-          maxGutterFor(state.canvas, state.tracks, action.orientation),
+          maxGutterFor(state.canvas, layout.tracks, action.orientation),
         ),
       };
     }

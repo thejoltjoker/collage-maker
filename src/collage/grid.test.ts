@@ -44,16 +44,25 @@ describe("computeTopology", () => {
 });
 
 describe("autoArrangement", () => {
-  it("puts the leftover photos in the bottom row", () => {
-    expect(autoArrangement(3)).toEqual([2, 1]);
-    expect(autoArrangement(5)).toEqual([3, 2]);
-    expect(autoArrangement(10)).toEqual([4, 4, 2]);
+  it("puts leftover photos in the last row when stacking rows", () => {
+    expect(autoArrangement(3, "rows")).toEqual([2, 1]);
+    expect(autoArrangement(5, "rows")).toEqual([3, 2]);
+    expect(autoArrangement(10, "rows")).toEqual([4, 4, 2]);
   });
 
-  it("always holds every photo", () => {
+  it("puts leftover photos in the last column when stacking columns", () => {
+    expect(autoArrangement(3, "columns")).toEqual([2, 1]);
+    expect(autoArrangement(5, "columns")).toEqual([2, 2, 1]);
+    expect(autoArrangement(6, "columns")).toEqual([2, 2, 2]);
+    expect(autoArrangement(10, "columns")).toEqual([3, 3, 3, 1]);
+  });
+
+  it("always holds every photo in either orientation", () => {
     for (let count = 1; count <= 12; count++) {
-      const rows = autoArrangement(count);
-      expect(rows.reduce((sum, row) => sum + row, 0)).toBe(count);
+      for (const orientation of ["rows", "columns"] as const) {
+        const bands = autoArrangement(count, orientation);
+        expect(bands.reduce((sum, band) => sum + band, 0)).toBe(count);
+      }
     }
   });
 });
