@@ -8,7 +8,14 @@ import {
 } from "react";
 import type { Placement } from "@/collage/arrange";
 import { zoomCropAt } from "@/collage/crop";
-import { bandLength, cellRects, contentLength, dividerCentres, trackEdges } from "@/collage/grid";
+import {
+  bandLength,
+  cellRects,
+  contentLength,
+  dividerCentres,
+  slotSnapTargets,
+  trackEdges,
+} from "@/collage/grid";
 import { imageFilesFrom } from "@/collage/loadImages";
 import type { CanvasSpec, Cell, CollageImage, Crop, Orientation, Tracks } from "@/collage/types";
 import { useElementSize } from "@/collage/useElementSize";
@@ -308,19 +315,21 @@ export function CollageCanvas({
               slots.length,
             );
 
-            return dividerCentres(bandLength(frame, orientation), previewGutter, slots).map(
-              (centre, index) => (
-                <GutterDivider
-                  key={`slot-${band}-${index}`}
-                  axis={rows ? "vertical" : "horizontal"}
-                  centre={centre}
-                  thickness={previewGutter}
-                  crossStart={start}
-                  crossLength={end - start}
-                  onResize={(deltaPx) => onResizeSlot(band, index, deltaPx / content)}
-                />
-              ),
-            );
+            const along = bandLength(frame, orientation);
+            const snaps = slotSnapTargets(along, previewGutter, tracks.slots, band);
+
+            return dividerCentres(along, previewGutter, slots).map((centre, index) => (
+              <GutterDivider
+                key={`slot-${band}-${index}`}
+                axis={rows ? "vertical" : "horizontal"}
+                centre={centre}
+                thickness={previewGutter}
+                crossStart={start}
+                crossLength={end - start}
+                snapTargets={snaps}
+                onResize={(deltaPx) => onResizeSlot(band, index, deltaPx / content)}
+              />
+            ));
           })}
 
         {scale > 0 &&

@@ -121,6 +121,7 @@ function App() {
           onPickSize={collage.setSize}
           onCustomSize={collage.setCustomSize}
           onOrientationChange={collage.setOrientation}
+          onRandomize={collage.randomize}
           onGutterChange={collage.setGutter}
           onGutterColorChange={collage.setGutterColor}
           onZoomChange={changeZoom}
@@ -169,8 +170,8 @@ function App() {
             images
           </Text>
           <Text lineClamp={1} display={{ base: "none", sm: "block" }}>
-            Drag a photo to reposition · Scroll to zoom · Drag a gutter to resize · Drag the move
-            handle onto another photo's edge to rearrange
+            Drag a photo to reposition · Scroll to zoom · Drag a gutter to resize · Hold Shift to
+            snap gutters · Drag the move handle onto another photo's edge to rearrange
           </Text>
         </HStack>
       </Flex>

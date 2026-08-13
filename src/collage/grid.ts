@@ -153,6 +153,34 @@ export function dividerCentres(total: number, gutter: number, fractions: number[
   return edges.slice(0, -1).map(([, end]) => end + gutter / 2);
 }
 
+/** Pull `value` onto the nearest target when within `threshold`, otherwise leave it. */
+export function snapToNearest(value: number, targets: number[], threshold: number): number {
+  if (threshold <= 0 || targets.length === 0) return value;
+
+  let best = value;
+  let bestDistance = Infinity;
+  for (const target of targets) {
+    const distance = Math.abs(target - value);
+    if (distance <= threshold && distance < bestDistance) {
+      best = target;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/** Centres of slot dividers in every band except `band`, for aligning gutters across bands. */
+export function slotSnapTargets(
+  total: number,
+  gutter: number,
+  slots: number[][],
+  band: number,
+): number[] {
+  return slots.flatMap((fractions, index) =>
+    index === band ? [] : dividerCentres(total, gutter, fractions),
+  );
+}
+
 export function clampExportSize(value: number): number {
   return Math.min(MAX_EXPORT_EDGE, Math.max(1, Math.round(value)));
 }

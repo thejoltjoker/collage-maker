@@ -6,6 +6,7 @@ import {
   type Layout,
   moveCell,
   type Placement,
+  randomizeLayout,
   removeCell,
 } from "./arrange";
 import { clampCrop } from "./crop";
@@ -51,6 +52,7 @@ type Action =
   | { type: "setCustomSize"; width?: number; height?: number }
   | { type: "setGutter"; gutter: number }
   | { type: "setGutterColor"; color: string }
+  | { type: "randomize" }
   | { type: "select"; index: number | null };
 
 function createInitialState(): CollageState {
@@ -275,6 +277,21 @@ function reduce(state: CollageState, action: Action): CollageState {
     case "setGutterColor":
       return { ...state, gutterColor: action.color };
 
+    case "randomize": {
+      if (filledCount(state.cells) < 2) return state;
+
+      const selectedId =
+        state.selectedIndex === null ? null : state.cells[state.selectedIndex]?.imageId;
+      const layout = randomizeLayout(state.cells);
+      return {
+        ...state,
+        ...layout,
+        autoArranged: false,
+        selectedIndex:
+          selectedId == null ? null : layout.cells.findIndex((cell) => cell.imageId === selectedId),
+      };
+    }
+
     case "select":
       return { ...state, selectedIndex: clampSelection(action.index, state.cells) };
   }
@@ -341,6 +358,7 @@ export function useCollage() {
       dispatch({ type: "setCustomSize", ...size }),
     setGutter: (gutter: number) => dispatch({ type: "setGutter", gutter }),
     setGutterColor: (color: string) => dispatch({ type: "setGutterColor", color }),
+    randomize: () => dispatch({ type: "randomize" }),
     select: (index: number | null) => dispatch({ type: "select", index }),
   };
 }

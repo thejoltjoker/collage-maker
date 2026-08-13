@@ -7,6 +7,7 @@ import {
   type Layout,
   moveCell,
   positionOf,
+  randomizeLayout,
   removeCell,
 } from "./arrange";
 import { arrangementOf, autoArrangement, equalTracks } from "./grid";
@@ -101,6 +102,35 @@ describe("removeCell", () => {
 
   it("falls back to a single empty slot", () => {
     expect(isEmpty(removeCell(layoutOf([["a"]]), 0))).toBe(true);
+  });
+});
+
+describe("randomizeLayout", () => {
+  it("shuffles photos and rebuilds bands from a random arrangement", () => {
+    const cells = ["a", "b", "c", "d", "e"].map(cell);
+    // Fisher–Yates then partition: each call consumes the next value.
+    const values = [0.9, 0.1, 0.5, 0.4, 0.6, 0.2];
+    let i = 0;
+    const random = () => values[i++] ?? 0;
+
+    const next = randomizeLayout(cells, random);
+
+    expect(next.cells.map((entry) => entry.imageId)).toEqual(["c", "d", "b", "a", "e"]);
+    expect(arrangementOf(next.tracks)).toEqual([4, 1]);
+    expect(next.tracks).toEqual(equalTracks([4, 1]));
+  });
+
+  it("keeps only filled photos and falls back to an empty collage", () => {
+    const withEmpty = randomizeLayout(
+      [cell("a"), { imageId: null, crop: cell("x").crop }],
+      () => 0.5,
+    );
+    expect(withEmpty.cells.map((entry) => entry.imageId)).toEqual(["a"]);
+    expect(arrangementOf(withEmpty.tracks)).toEqual([1]);
+
+    expect(randomizeLayout([{ imageId: null, crop: cell("x").crop }], () => 0.5)).toEqual(
+      emptyLayout(),
+    );
   });
 });
 

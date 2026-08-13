@@ -14,7 +14,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { type ReactNode, useRef } from "react";
-import { LuColumns3, LuImagePlus, LuRows3, LuTrash2 } from "react-icons/lu";
+import { LuColumns3, LuImagePlus, LuRows3, LuShuffle, LuTrash2 } from "react-icons/lu";
 import { MAX_ZOOM, MIN_ZOOM } from "@/collage/crop";
 import { MAX_EXPORT_EDGE, MAX_IMAGES } from "@/collage/grid";
 import { imageFilesFrom } from "@/collage/loadImages";
@@ -43,6 +43,7 @@ type SidebarControlsProps = {
   onPickSize: (preset: SizePreset) => void;
   onCustomSize: (size: { width?: number; height?: number }) => void;
   onOrientationChange: (orientation: Orientation) => void;
+  onRandomize: () => void;
   onGutterChange: (gutter: number) => void;
   onGutterColorChange: (color: string) => void;
   onZoomChange: (zoom: number) => void;
@@ -84,6 +85,7 @@ export function SidebarControls({
   onPickSize,
   onCustomSize,
   onOrientationChange,
+  onRandomize,
   onGutterChange,
   onGutterColorChange,
   onZoomChange,
@@ -239,6 +241,10 @@ export function SidebarControls({
             ? "Photos sit in rows that each span the full width."
             : "Photos sit in columns that each span the full height."}
         </Text>
+        <Button variant="surface" size="sm" disabled={imageCount < 2} onClick={onRandomize}>
+          <LuShuffle />
+          Randomize layout
+        </Button>
       </Section>
 
       <Section title="Gutter">
@@ -296,7 +302,8 @@ export function SidebarControls({
       <Section title="Selected image">
         {selectedZoom === null ? (
           <Text fontSize="xs" color="fg.muted">
-            Click a photo to zoom or remove it. Drag a photo to move it inside its frame.
+            Click a photo to zoom or remove it. Double-click to reset zoom. Drag a photo to move it
+            inside its frame.
           </Text>
         ) : (
           <Stack gap={3}>

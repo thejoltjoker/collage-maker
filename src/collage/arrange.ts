@@ -72,6 +72,46 @@ export function autoLayout(cells: Cell[], tracks: Tracks, orientation: Orientati
   };
 }
 
+function shuffle<T>(items: readonly T[], random: () => number): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const current = next[i]!;
+    next[i] = next[j]!;
+    next[j] = current;
+  }
+  return next;
+}
+
+/** Splits `count` photos into bands of one or more, sized at random. */
+export function randomArrangement(count: number, random: () => number = Math.random): number[] {
+  if (count <= 1) return [Math.max(1, count)];
+
+  const bands: number[] = [];
+  let remaining = count;
+  while (remaining > 0) {
+    const size = Math.floor(random() * remaining) + 1;
+    bands.push(size);
+    remaining -= size;
+  }
+  return bands;
+}
+
+/** Shuffles photo order and rebuilds an even grid from a random band arrangement. */
+export function randomizeLayout(
+  cells: readonly Cell[],
+  random: () => number = Math.random,
+): Layout {
+  const filled = cells.filter((cell) => cell.imageId !== null);
+  if (filled.length === 0) return emptyLayout();
+
+  const shuffled = shuffle(filled, random);
+  return {
+    cells: shuffled,
+    tracks: equalTracks(randomArrangement(shuffled.length, random)),
+  };
+}
+
 export function isEmpty(layout: Layout): boolean {
   return layout.cells.length === 1 && layout.cells[0]?.imageId === null;
 }

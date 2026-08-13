@@ -1,7 +1,9 @@
 import { Box } from "@chakra-ui/react";
 import { type PointerEvent as ReactPointerEvent, useRef, useState } from "react";
+import { snapToNearest } from "@/collage/grid";
 
 const MIN_HIT_AREA = 12;
+const SNAP_THRESHOLD = 12;
 
 type GutterDividerProps = {
   axis: "vertical" | "horizontal";
@@ -11,6 +13,8 @@ type GutterDividerProps = {
   /** Extent across the other axis, so a divider only covers the cells it separates. */
   crossStart: number;
   crossLength: number;
+  /** Other gutter centres to align with while Shift is held. */
+  snapTargets?: number[];
   onResize: (deltaPx: number) => void;
 };
 
@@ -21,32 +25,46 @@ export function GutterDivider({
   thickness,
   crossStart,
   crossLength,
+  snapTargets = [],
   onResize,
 }: GutterDividerProps) {
   const [active, setActive] = useState(false);
-  const lastRef = useRef<number | null>(null);
+  const dragRef = useRef<{ startPointer: number; startCentre: number; applied: number } | null>(
+    null,
+  );
   const vertical = axis === "vertical";
   const hitArea = Math.max(MIN_HIT_AREA, thickness);
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
     event.stopPropagation();
-    lastRef.current = vertical ? event.clientX : event.clientY;
+    dragRef.current = {
+      startPointer: vertical ? event.clientX : event.clientY,
+      startCentre: centre,
+      applied: 0,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
     setActive(true);
   }
 
   function move(event: ReactPointerEvent<HTMLDivElement>) {
-    const previous = lastRef.current;
-    if (previous === null) return;
+    const drag = dragRef.current;
+    if (!drag) return;
 
     const position = vertical ? event.clientX : event.clientY;
-    lastRef.current = position;
-    onResize(position - previous);
+    let desired = drag.startCentre + (position - drag.startPointer);
+    if (event.shiftKey && snapTargets.length > 0) {
+      desired = snapToNearest(desired, snapTargets, SNAP_THRESHOLD);
+    }
+
+    const total = desired - drag.startCentre;
+    const step = total - drag.applied;
+    drag.applied = total;
+    if (step !== 0) onResize(step);
   }
 
   function end(event: ReactPointerEvent<HTMLDivElement>) {
-    lastRef.current = null;
+    dragRef.current = null;
     setActive(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);

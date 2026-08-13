@@ -1,7 +1,8 @@
 import { Box, Icon, IconButton, Image, Stack, Text } from "@chakra-ui/react";
 import { type PointerEvent as ReactPointerEvent, useRef, useState } from "react";
 import { LuImage, LuMove, LuX } from "react-icons/lu";
-import { imageOffset, panCrop, renderedSize } from "@/collage/crop";
+import { imageOffset, panCrop, renderedSize, setZoom } from "@/collage/crop";
+import { DEFAULT_CROP } from "@/collage/grid";
 import type { Cell, CollageImage, Crop, Rect } from "@/collage/types";
 import { DropIndicator, type Indicator } from "./DropIndicator";
 
@@ -76,6 +77,12 @@ export function CollageCell({
     }
   }
 
+  function resetZoom() {
+    if (!image) return;
+    onSelect(index);
+    onCropChange(index, setZoom(image, rect, cell.crop, DEFAULT_CROP.zoom));
+  }
+
   return (
     <Box
       data-cell-index={index}
@@ -98,6 +105,7 @@ export function CollageCell({
       onPointerMove={movePan}
       onPointerUp={endPan}
       onPointerCancel={endPan}
+      onDoubleClick={resetZoom}
       css={{ "&:hover [data-cell-control]": { opacity: 1 } }}
     >
       {image && rendered && offset ? (

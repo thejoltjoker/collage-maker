@@ -10,6 +10,8 @@ import {
   minTrackFraction,
   normalizeFractions,
   resizeTracks,
+  slotSnapTargets,
+  snapToNearest,
   syncTracks,
 } from "./grid";
 
@@ -228,5 +230,35 @@ describe("dividerCentres", () => {
   it("has one fewer entry than tracks", () => {
     expect(dividerCentres(1000, 10, [0.25, 0.25, 0.5])).toHaveLength(2);
     expect(dividerCentres(1000, 10, [1])).toHaveLength(0);
+  });
+});
+
+describe("snapToNearest", () => {
+  it("pulls a value onto a nearby target", () => {
+    expect(snapToNearest(103, [50, 100, 200], 8)).toBe(100);
+  });
+
+  it("leaves the value alone when nothing is close enough", () => {
+    expect(snapToNearest(130, [50, 100, 200], 8)).toBe(130);
+  });
+
+  it("picks the closest target when several are in range", () => {
+    expect(snapToNearest(103, [100, 108], 8)).toBe(100);
+  });
+});
+
+describe("slotSnapTargets", () => {
+  it("lists divider centres from every band except the one being dragged", () => {
+    const slots = [
+      [0.5, 0.5],
+      [0.3, 0.7],
+      [0.4, 0.6],
+    ];
+    const other = [...dividerCentres(1000, 20, slots[1]!), ...dividerCentres(1000, 20, slots[2]!)];
+
+    expect(slotSnapTargets(1000, 20, slots, 0)).toEqual(other);
+    expect(slotSnapTargets(1000, 20, slots, 1)).not.toContainEqual(
+      dividerCentres(1000, 20, slots[1]!)[0],
+    );
   });
 });
